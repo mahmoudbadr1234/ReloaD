@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>رفع الصورة الشخصية - ReloaD</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0e0e10 0%, #1a1a1d 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            direction: rtl;
+        }
+        
+        .container {
+            background: #18181b;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            border: 1px solid #3a3a3d;
+        }
+        
+        h1 {
+            color: #9147ff;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .upload-area {
+            border: 2px dashed #9147ff;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(145, 71, 255, 0.05);
+        }
+        
+        .upload-area:hover {
+            background: rgba(145, 71, 255, 0.1);
+            border-color: #a970ff;
+        }
+        
+        .upload-area.dragover {
+            background: rgba(145, 71, 255, 0.2);
+            border-color: #a970ff;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .preview {
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .preview img {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 50%;
+            border: 3px solid #9147ff;
+            box-shadow: 0 8px 30px rgba(145, 71, 255, 0.3);
+        }
+        
+        button {
+            background: linear-gradient(135deg, #9147ff, #772ce8);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(145, 71, 255, 0.4);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            display: none;
+        }
+        
+        .message.success {
+            background: rgba(0, 255, 0, 0.1);
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            display: block;
+        }
+        
+        .message.error {
+            background: rgba(255, 0, 0, 0.1);
+            color: #ff0000;
+            border: 1px solid #ff0000;
+            display: block;
+        }
+        
+        .instructions {
+            background: rgba(145, 71, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>رفع الصورة الشخصية</h1>
+        
+        <div class="instructions">
+            <p><strong>تعليمات:</strong></p>
+            <ol style="margin-right: 20px; margin-top: 10px;">
+                <li>اختر الصورة الشخصية من جهازك</li>
+                <li>سيتم حفظها باسم <code>avatar.jpg</code> تلقائياً</li>
+                <li>بعد الرفع، افتح <code>index.html</code> لرؤية الصورة</li>
+            </ol>
+        </div>
+        
+        <div class="upload-area" id="uploadArea">
+            <p style="font-size: 18px; margin-bottom: 10px;">📁 اضغط أو اسحب الصورة هنا</p>
+            <p style="font-size: 14px; color: #adadb8;">JPG, PNG أو أي صورة</p>
+        </div>
+        
+        <input type="file" id="fileInput" accept="image/*">
+        
+        <div class="preview" id="preview" style="display: none;">
+            <img id="previewImage" src="" alt="Preview">
+        </div>
+        
+        <button id="saveBtn" disabled>حفظ الصورة</button>
+        
+        <div class="message" id="message"></div>
+    </div>
+    
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const preview = document.getElementById('preview');
+        const previewImage = document.getElementById('previewImage');
+        const saveBtn = document.getElementById('saveBtn');
+        const message = document.getElementById('message');
+        
+        let selectedFile = null;
+        
+        // Click to upload
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        // Drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+        
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showMessage('الرجاء اختيار ملف صورة', 'error');
+                return;
+            }
+            
+            selectedFile = file;
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                previewImage.src = e.target.result;
+                preview.style.display = 'block';
+                saveBtn.disabled = false;
+                hideMessage();
+            };
+            
+            reader.readAsDataURL(file);
+        }
+        
+        saveBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+            
+            try {
+                // Convert to blob and download
+                const response = await fetch(previewImage.src);
+                const blob = await response.blob();
+                
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'avatar.jpg';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                showMessage('تم حفظ الصورة! الرجاء وضع ملف avatar.jpg في مجلد المشروع بجانب index.html', 'success');
+            } catch (error) {
+                showMessage('حدث خطأ أثناء حفظ الصورة', 'error');
+                console.error(error);
+            }
+        });
+        
+        function showMessage(text, type) {
+            message.textContent = text;
+            message.className = `message ${type}`;
+        }
+        
+        function hideMessage() {
+            message.className = 'message';
+        }
+    </script>
+</body>
+</html>
+
